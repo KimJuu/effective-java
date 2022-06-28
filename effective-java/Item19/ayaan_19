@@ -1,0 +1,71 @@
+#19 상속을 고려해 설계하고 문서화하라. 그러지 않았다면 상속을 금지해라
+
+
+1. 상속을 고려한 설계화 문서화
+
+- 상속용 클래스는 재정의할 수 있는 메서드들을 내부적으로 어떻게 이용하는지(자기사용) 문서로 남겨야 한다.
+
+Ex) java.util.AbstractCollection - public boolean remove(Object o)
+
+iterator 메서드를 재정의하면 remove 메서드의 동작에 영향을 주는데, Implementation Requirements에 설명이 있다.
+
+문서로만 상속을 위한 설계의 전부는 아니고, 효율적인 하위 클래스를 큰 어려움 없이 만들려면 클래스의 내부 동작 과정 중간에 끼어들 수 있는 훅(hook)을 
+잘 선별하여 protected 메서드 형태로 공개해야 할 수도 있다.(훅 = iterator)
+
+
+
+- protected의 공개여부를 결정하는 방법은 직접 하위 클래스를 만들어보는 것이 유일
+
+상속용 클래스의 검증에는 하위 클래스 3개 정도가 적당하며, 배포 전 반드시 하위 클래스를 만들어 검증을 해야한다.
+
+
+- 상속용 클래스의 생성자는 직접적으로든 간접적으로든 재정의 가능 메서드를 호출해서는 안된다.
+
+Ex1)
+//상위 클래스
+public class Super {
+    public Super(){
+        overrideMe();
+    }
+
+    public void overrideMe(){
+    }
+}
+
+
+//하위 클래스
+public class Sub extends Super{
+    private final Instant instant;
+
+    Sub() {
+        this.instant = Instant.now();
+    }
+
+    @Override
+    public void overrideMe(){
+        System.out.println("instant : " + instant);
+    }
+
+    public static void main(String[] args) {
+        Sub sub = new Sub();
+        sub.overrideMe();
+    }
+}
+
+결과
+instant : null
+instant : 2022-06-28T15:30:45.548520100Z
+
+Ex2) Cloneable(clone, readObject), Serializable(readResolve, writeReplace)
+두 메소드도 생성자와 비슷한 효과를 내므로 두 메소드 모두 직접적으로든 간적적으로든 재정의 가능 메서드를 호출해서는 안 된다.
+* 인터페이스를 구현한 클래스는 상속을 금지해도 문제가 없다.
+
+위 문제를 해결하는 가장 좋은 방법은 상속용으로 설계하지 않은 클래스는 상속을 금지한다.
+
+1) 클래스를 final로 선언
+2) 모든 생성자를 private, package-private으로 선언하고 public 정적 팩터리를 만들어주는 방법
+
+
+정리
+상속용 클래스를 설계하려면 클래스 내부에서 스스로를 어떻게 사용하는지(자기사용 패턴) 모두 문서화
+효율적인 하위 클래스를 만들 수 있도록 일부 메서드를 protected로 제공
